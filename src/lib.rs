@@ -172,37 +172,45 @@ pub fn day3p2(input: &str) -> usize {
 }
 
 pub fn day4p1(input: &str) -> usize {
-    let dirs: [(isize, isize); 8] = [
-        (-1, -1),
-        (-1, 0),
-        (-1, 1),
-        (0, -1),
-        (0, 1),
-        (1, -1),
-        (1, 0),
-        (1, 1),
-    ];
     let grid: Vec<Vec<u8>> = input
         .lines()
         .map(|line| line.bytes().map(|b| (b == b'@') as u8).collect())
         .collect();
-    let mut sum = 0;
+
     let num_rows = grid.len();
     let num_cols = grid[0].len();
+    let mut sum = 0;
+
     for (i, row) in grid.iter().enumerate() {
         for (j, entry) in row.iter().enumerate() {
             if *entry == 1 {
-                let mut adj_paper = 0;
-                for &(dx, dy) in &dirs {
-                    if let (Some(ni), Some(nj)) =
-                        (i.checked_add_signed(dx), j.checked_add_signed(dy))
-                    {
-                        if ni < num_rows && nj < num_cols {
-                            adj_paper += grid[ni as usize][nj as usize];
-                        }
-                    }
+                // unroll neighbor checks
+                let mut adj = 0;
+                if i > 0 && j > 0 {
+                    adj += grid[i - 1][j - 1];
                 }
-                if adj_paper < 4 {
+                if i > 0 {
+                    adj += grid[i - 1][j];
+                }
+                if i > 0 && j < num_cols - 1 {
+                    adj += grid[i - 1][j + 1];
+                }
+                if j > 0 {
+                    adj += grid[i][j - 1];
+                }
+                if j < num_cols - 1 {
+                    adj += grid[i][j + 1];
+                }
+                if i < num_rows - 1 && j > 0 {
+                    adj += grid[i + 1][j - 1];
+                }
+                if i < num_rows - 1 {
+                    adj += grid[i + 1][j];
+                }
+                if i < num_rows - 1 && j < num_cols - 1 {
+                    adj += grid[i + 1][j + 1];
+                }
+                if adj < 4 {
                     sum += 1;
                 }
             }
@@ -212,41 +220,49 @@ pub fn day4p1(input: &str) -> usize {
 }
 
 pub fn day4p2(input: &str) -> usize {
-    let dirs: [(isize, isize); 8] = [
-        (-1, -1),
-        (-1, 0),
-        (-1, 1),
-        (0, -1),
-        (0, 1),
-        (1, -1),
-        (1, 0),
-        (1, 1),
-    ];
     let mut grid: Vec<Vec<u8>> = input
         .lines()
         .map(|line| line.bytes().map(|b| (b == b'@') as u8).collect())
         .collect();
-    let mut sum = 0;
     let num_rows = grid.len();
     let num_cols = grid[0].len();
+    let mut sum = 0;
+    // preallocate to 2028. grid starts with under this amount removed
+    let mut to_remove: Vec<(usize, usize)> = Vec::with_capacity(2048);
     loop {
+        to_remove.clear();
         let mut to_remove = vec![];
         for (i, row) in grid.iter().enumerate() {
             for (j, entry) in row.iter().enumerate() {
                 if *entry == 1 {
-                    let mut adj_paper = 0;
-                    for &(dx, dy) in &dirs {
-                        if let (Some(ni), Some(nj)) =
-                            (i.checked_add_signed(dx), j.checked_add_signed(dy))
-                        {
-                            if ni < num_rows && nj < num_cols {
-                                adj_paper += grid[ni as usize][nj as usize];
-                            }
-                        }
+                    // unroll neighbor checks
+                    let mut adj = 0;
+                    if i > 0 && j > 0 {
+                        adj += grid[i - 1][j - 1];
                     }
-                    if adj_paper < 4 {
+                    if i > 0 {
+                        adj += grid[i - 1][j];
+                    }
+                    if i > 0 && j < num_cols - 1 {
+                        adj += grid[i - 1][j + 1];
+                    }
+                    if j > 0 {
+                        adj += grid[i][j - 1];
+                    }
+                    if j < num_cols - 1 {
+                        adj += grid[i][j + 1];
+                    }
+                    if i < num_rows - 1 && j > 0 {
+                        adj += grid[i + 1][j - 1];
+                    }
+                    if i < num_rows - 1 {
+                        adj += grid[i + 1][j];
+                    }
+                    if i < num_rows - 1 && j < num_cols - 1 {
+                        adj += grid[i + 1][j + 1];
+                    }
+                    if adj < 4 {
                         to_remove.push((i, j));
-                        sum += 1;
                     }
                 }
             }
@@ -254,8 +270,9 @@ pub fn day4p2(input: &str) -> usize {
         if to_remove.is_empty() {
             break;
         } else {
-            for (i, j) in to_remove {
-                grid[i][j] = 0;
+            sum += to_remove.len();
+            for (i, j) in &to_remove {
+                grid[*i][*j] = 0;
             }
         }
     }
