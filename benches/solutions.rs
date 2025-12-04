@@ -1,5 +1,6 @@
-use aoc2025::*;
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use aoc25::*;
+use criterion::{Criterion, criterion_group, criterion_main};
+use std::hint::black_box;
 
 fn benchmark_day1(c: &mut Criterion) {
     let input1 = include_str!("../input/1");
@@ -25,5 +26,19 @@ fn benchmark_day3(c: &mut Criterion) {
     c.bench_function("day3p2", |b| b.iter(|| day3p2(black_box(input3))));
 }
 
-criterion_group!(benches, benchmark_day1, benchmark_day2, benchmark_day3);
+fn benchmark_day4(c: &mut Criterion) {
+    let input4 = include_str!("../input/4");
+
+    c.bench_function("day4p1", |b| b.iter(|| day4p1(black_box(input4))));
+
+    c.bench_function("day4p2", |b| b.iter(|| day4p2(black_box(input4))));
+}
+
+criterion_group!(
+    benches,
+    benchmark_day1,
+    benchmark_day2,
+    benchmark_day3,
+    benchmark_day4
+);
 criterion_main!(benches);

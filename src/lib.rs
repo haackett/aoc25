@@ -171,13 +171,96 @@ pub fn day3p2(input: &str) -> usize {
     sum
 }
 
-// pub fn day4p1(input: &str) -> usize {
-//     0
-// }
-//
-// pub fn day4p2(input: &str) -> usize {
-//     0
-// }
+pub fn day4p1(input: &str) -> usize {
+    let dirs: [(isize, isize); 8] = [
+        (-1, -1),
+        (-1, 0),
+        (-1, 1),
+        (0, -1),
+        (0, 1),
+        (1, -1),
+        (1, 0),
+        (1, 1),
+    ];
+    let grid: Vec<Vec<u8>> = input
+        .lines()
+        .map(|line| line.bytes().map(|b| (b == b'@') as u8).collect())
+        .collect();
+    let mut sum = 0;
+    let num_rows = grid.len();
+    let num_cols = grid[0].len();
+    for (i, row) in grid.iter().enumerate() {
+        for (j, entry) in row.iter().enumerate() {
+            if *entry == 1 {
+                let mut adj_paper = 0;
+                for &(dx, dy) in &dirs {
+                    if let (Some(ni), Some(nj)) =
+                        (i.checked_add_signed(dx), j.checked_add_signed(dy))
+                    {
+                        if ni < num_rows && nj < num_cols {
+                            adj_paper += grid[ni as usize][nj as usize];
+                        }
+                    }
+                }
+                if adj_paper < 4 {
+                    sum += 1;
+                }
+            }
+        }
+    }
+    sum
+}
+
+pub fn day4p2(input: &str) -> usize {
+    let dirs: [(isize, isize); 8] = [
+        (-1, -1),
+        (-1, 0),
+        (-1, 1),
+        (0, -1),
+        (0, 1),
+        (1, -1),
+        (1, 0),
+        (1, 1),
+    ];
+    let mut grid: Vec<Vec<u8>> = input
+        .lines()
+        .map(|line| line.bytes().map(|b| (b == b'@') as u8).collect())
+        .collect();
+    let mut sum = 0;
+    let num_rows = grid.len();
+    let num_cols = grid[0].len();
+    loop {
+        let mut to_remove = vec![];
+        for (i, row) in grid.iter().enumerate() {
+            for (j, entry) in row.iter().enumerate() {
+                if *entry == 1 {
+                    let mut adj_paper = 0;
+                    for &(dx, dy) in &dirs {
+                        if let (Some(ni), Some(nj)) =
+                            (i.checked_add_signed(dx), j.checked_add_signed(dy))
+                        {
+                            if ni < num_rows && nj < num_cols {
+                                adj_paper += grid[ni as usize][nj as usize];
+                            }
+                        }
+                    }
+                    if adj_paper < 4 {
+                        to_remove.push((i, j));
+                        sum += 1;
+                    }
+                }
+            }
+        }
+        if to_remove.is_empty() {
+            break;
+        } else {
+            for (i, j) in to_remove {
+                grid[i][j] = 0;
+            }
+        }
+    }
+    sum
+}
 //
 // pub fn day5p1(input: &str) -> usize {
 //     0
