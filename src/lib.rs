@@ -171,6 +171,28 @@ pub fn day3p2(input: &str) -> usize {
     sum
 }
 
+#[inline]
+fn count_neighbors(grid: &[Vec<u8>], i: usize, j: usize, num_rows: usize, num_cols: usize) -> u8 {
+    const DIRS: [(isize, isize); 8] = [
+        (-1, -1),
+        (-1, 0),
+        (-1, 1),
+        (0, -1),
+        (0, 1),
+        (1, -1),
+        (1, 0),
+        (1, 1),
+    ];
+
+    DIRS.iter()
+        .filter_map(|&(di, dj)| {
+            let ni = i.wrapping_add_signed(di);
+            let nj = j.wrapping_add_signed(dj);
+            (ni < num_rows && nj < num_cols).then(|| grid[ni][nj])
+        })
+        .sum()
+}
+
 pub fn day4p1(input: &str) -> usize {
     let grid: Vec<Vec<u8>> = input
         .lines()
@@ -181,38 +203,10 @@ pub fn day4p1(input: &str) -> usize {
     let num_cols = grid[0].len();
     let mut sum = 0;
 
-    for (i, row) in grid.iter().enumerate() {
-        for (j, entry) in row.iter().enumerate() {
-            if *entry == 1 {
-                // unroll neighbor checks
-                let mut adj = 0;
-                if i > 0 && j > 0 {
-                    adj += grid[i - 1][j - 1];
-                }
-                if i > 0 {
-                    adj += grid[i - 1][j];
-                }
-                if i > 0 && j < num_cols - 1 {
-                    adj += grid[i - 1][j + 1];
-                }
-                if j > 0 {
-                    adj += grid[i][j - 1];
-                }
-                if j < num_cols - 1 {
-                    adj += grid[i][j + 1];
-                }
-                if i < num_rows - 1 && j > 0 {
-                    adj += grid[i + 1][j - 1];
-                }
-                if i < num_rows - 1 {
-                    adj += grid[i + 1][j];
-                }
-                if i < num_rows - 1 && j < num_cols - 1 {
-                    adj += grid[i + 1][j + 1];
-                }
-                if adj < 4 {
-                    sum += 1;
-                }
+    for i in 0..num_rows {
+        for j in 0..num_cols {
+            if grid[i][j] == 1 && count_neighbors(&grid, i, j, num_rows, num_cols) < 4 {
+                sum += 1;
             }
         }
     }
@@ -224,69 +218,100 @@ pub fn day4p2(input: &str) -> usize {
         .lines()
         .map(|line| line.bytes().map(|b| (b == b'@') as u8).collect())
         .collect();
+
     let num_rows = grid.len();
     let num_cols = grid[0].len();
     let mut sum = 0;
-    // preallocate to 2028. grid starts with under this amount removed
     let mut to_remove: Vec<(usize, usize)> = Vec::with_capacity(2048);
+
     loop {
         to_remove.clear();
-        let mut to_remove = vec![];
-        for (i, row) in grid.iter().enumerate() {
-            for (j, entry) in row.iter().enumerate() {
-                if *entry == 1 {
-                    // unroll neighbor checks
-                    let mut adj = 0;
-                    if i > 0 && j > 0 {
-                        adj += grid[i - 1][j - 1];
-                    }
-                    if i > 0 {
-                        adj += grid[i - 1][j];
-                    }
-                    if i > 0 && j < num_cols - 1 {
-                        adj += grid[i - 1][j + 1];
-                    }
-                    if j > 0 {
-                        adj += grid[i][j - 1];
-                    }
-                    if j < num_cols - 1 {
-                        adj += grid[i][j + 1];
-                    }
-                    if i < num_rows - 1 && j > 0 {
-                        adj += grid[i + 1][j - 1];
-                    }
-                    if i < num_rows - 1 {
-                        adj += grid[i + 1][j];
-                    }
-                    if i < num_rows - 1 && j < num_cols - 1 {
-                        adj += grid[i + 1][j + 1];
-                    }
-                    if adj < 4 {
-                        to_remove.push((i, j));
-                    }
+
+        for i in 0..num_rows {
+            for j in 0..num_cols {
+                if grid[i][j] == 1 && count_neighbors(&grid, i, j, num_rows, num_cols) < 4 {
+                    to_remove.push((i, j));
                 }
             }
         }
+
         if to_remove.is_empty() {
             break;
-        } else {
-            sum += to_remove.len();
-            for (i, j) in &to_remove {
-                grid[*i][*j] = 0;
-            }
+        }
+
+        sum += to_remove.len();
+        for &(i, j) in &to_remove {
+            grid[i][j] = 0;
         }
     }
+
     sum
 }
-//
-// pub fn day5p1(input: &str) -> usize {
-//     0
-// }
-//
-// pub fn day5p2(input: &str) -> usize {
-//     0
-// }
-//
+
+pub fn day5p1(input: &str) -> usize {
+    let (seg_intervals, seg_ids) = input.split_once("\n\n").unwrap();
+    let mut intervals = seg_intervals
+        .lines()
+        .filter_map(|line| {
+            let (start, end) = line.split_once('-')?;
+            Some((start.parse().ok()?, end.parse().ok()?))
+        })
+        .collect::<Vec<(usize, usize)>>();
+    intervals.sort_unstable();
+
+    let mut merged = Vec::new();
+    for (start, end) in &intervals {
+        if let Some((ml, mr)) = merged.last_mut() {
+            if start <= *mr {
+                *mr = (*mr).max(end);
+                continue;
+            }
+        }
+        merged.push((start, end));
+    }
+    seg_ids
+        .lines()
+        .filter(|line| {
+            let id: usize = line.parse().unwrap();
+            merged
+                .binary_search_by(|&(l, r)| {
+                    if id < *l {
+                        std::cmp::Ordering::Greater
+                    } else if id > *r {
+                        std::cmp::Ordering::Less
+                    } else {
+                        std::cmp::Ordering::Equal
+                    }
+                })
+                .is_ok()
+        })
+        .count()
+}
+
+pub fn day5p2(input: &str) -> usize {
+    let (seg_intervals, seg_ids) = input.split_once("\n\n").unwrap();
+    let mut intervals = seg_intervals
+        .lines()
+        .filter_map(|line| {
+            let (start, end) = line.split_once('-')?;
+            Some((start.parse().ok()?, end.parse().ok()?))
+        })
+        .collect::<Vec<(usize, usize)>>();
+    intervals.sort_unstable();
+
+    let mut merged = Vec::new();
+    for (start, end) in &intervals {
+        if let Some((ml, mr)) = merged.last_mut() {
+            if start <= *mr {
+                *mr = (*mr).max(end);
+                continue;
+            }
+        }
+        merged.push((start, end));
+    }
+    merged.iter().map(|&(l, r)| r - l + 1).sum()
+}
+
 // pub fn day6p1(input: &str) -> usize {
 //     0
 // }
