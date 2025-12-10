@@ -1,3 +1,6 @@
+use std::collections::HashSet;
+use std::io::BufRead;
+
 pub fn day1p1(input: &str) -> usize {
     let mut dial = 50;
     let mut cnt = 0;
@@ -312,21 +315,161 @@ pub fn day5p2(input: &str) -> usize {
     merged.iter().map(|&(l, r)| r - l + 1).sum()
 }
 
-// pub fn day6p1(input: &str) -> usize {
-//     0
-// }
-//
-// pub fn day6p2(input: &str) -> usize {
-//     0
-// }
-//
-// pub fn day7p1(input: &str) -> usize {
-//     0
-// }
-//
-// pub fn day7p2(input: &str) -> usize {
-//     0
-// }
+pub fn day6p1(input: &str) -> usize {
+    let lines: Vec<&str> = input.lines().collect();
+    let numbers: Vec<Vec<usize>> = lines[0..lines.len() - 1]
+        .iter()
+        .map(|line| {
+            line.trim()
+                .split(' ')
+                .filter_map(|s| s.parse::<usize>().ok())
+                .collect()
+        })
+        .collect();
+
+    let mut ops: Vec<char> = vec![];
+    for c in lines.last().unwrap().chars() {
+        if c == '*' {
+            ops.push(c);
+        } else if c == '+' {
+            ops.push(c);
+        }
+    }
+
+    let mut sum = 0;
+    for i in 0..numbers[0].len() {
+        let mut tmp;
+        if ops[i] == '*' {
+            tmp = 1;
+            for j in 0..numbers.len() {
+                tmp *= numbers[j][i];
+            }
+        } else if ops[i] == '+' {
+            tmp = 0;
+            for j in 0..numbers.len() {
+                tmp += numbers[j][i];
+            }
+        } else {
+            panic!("unknown op");
+        }
+        sum += tmp;
+    }
+
+    sum
+}
+
+fn get_col(rows: &[&[u8]], idx_col: usize) -> Option<usize> {
+    let mut res = None;
+    let mut multiplier = 1;
+
+    for row in rows.iter().rev() {
+        if idx_col < row.len() && row[idx_col].is_ascii_digit() {
+            let digit = (row[idx_col] - b'0') as usize;
+
+            if let Some(val) = res {
+                res = Some(val + digit * multiplier);
+            } else {
+                res = Some(digit);
+            }
+            multiplier *= 10;
+        }
+    }
+    res
+}
+
+pub fn day6p2(input: &str) -> usize {
+    let rows: Vec<&[u8]> = input.lines().map(|line| line.as_bytes()).collect();
+    let data_rows: Vec<&[u8]> = rows[..rows.len() - 1].to_vec(); // exclude operator row
+    let ops = rows.last().unwrap();
+
+    let mut sum = 0;
+    let mut tmp = None;
+    let mut current_op = None;
+
+    for i in 0..ops.len() {
+        let ch = ops[i];
+
+        if ch == b'*' || ch == b'+' {
+            if let (Some(op), Some(val)) = (current_op, tmp) {
+                sum += val;
+            }
+            current_op = Some(ch);
+            tmp = if ch == b'*' { Some(1) } else { Some(0) };
+        }
+        {
+            if let Some(col_val) = get_col(&data_rows, i) {
+                if let Some(op) = current_op {
+                    if op == b'*' {
+                        tmp = Some(tmp.unwrap_or(1) * col_val);
+                    } else if op == b'+' {
+                        tmp = Some(tmp.unwrap_or(0) + col_val);
+                    }
+                }
+            }
+        }
+    }
+
+    if let Some(val) = tmp {
+        sum += val;
+    }
+
+    sum
+}
+
+pub fn day7p1(input: &str) -> usize {
+    let rows: Vec<&[u8]> = input.lines().map(|line| line.as_bytes()).collect();
+    // idea: track the current rows beams counting the number of splits
+    let start = rows[0].iter().position(|&c| c == b'S').unwrap();
+    let mut beams = HashSet::new();
+    beams.insert((1, start));
+
+    let mut sum = 0;
+
+    for i in 1..(rows.len() - 1) {
+        let mut new_beams = HashSet::new();
+        for beam in &beams {
+            // is there a splitter in the path of this beam?
+            if rows[beam.0 + 1][beam.1] == b'^' {
+                sum += 1;
+                new_beams.insert((beam.0 + 1, beam.1 - 1)); // left 
+                new_beams.insert((beam.0 + 1, beam.1 + 1)); // right
+            } else {
+                new_beams.insert((beam.0 + 1, beam.1));
+            }
+        }
+        beams = new_beams;
+    }
+    sum
+}
+
+pub fn day7p2(input: &str) -> usize {
+    let rows: Vec<&[u8]> = input.lines().map(|line| line.as_bytes()).collect();
+    let start = rows[0].iter().position(|&c| c == b'S').unwrap();
+    let mut beams = HashSet::new();
+    beams.insert((1, start));
+
+    let mut path_counts = vec![vec![0; rows[0].len()]; rows.len()];
+    path_counts[1][start] = 1;
+
+    // idea: each grid position tracks how many distinct paths make it to it
+    for i in 1..(rows.len() - 1) {
+        let mut new_beams = HashSet::new();
+        for beam in &beams {
+            // is there a splitter in the path of this beam?
+            if rows[beam.0 + 1][beam.1] == b'^' {
+                new_beams.insert((beam.0 + 1, beam.1 - 1)); // left 
+                new_beams.insert((beam.0 + 1, beam.1 + 1)); // right
+                path_counts[beam.0 + 1][beam.1 - 1] += path_counts[beam.0][beam.1];
+                path_counts[beam.0 + 1][beam.1 + 1] += path_counts[beam.0][beam.1];
+            } else {
+                new_beams.insert((beam.0 + 1, beam.1));
+                path_counts[beam.0 + 1][beam.1] += path_counts[beam.0][beam.1];
+            }
+        }
+        beams = new_beams;
+    }
+    path_counts.last().unwrap().iter().sum()
+}
 //
 // pub fn day8p1(input: &str) -> usize {
 //     0

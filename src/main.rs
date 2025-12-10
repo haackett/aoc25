@@ -11,4 +11,8 @@ fn main() {
     println!("day4p2: {}", day4p2(include_str!("../input/4")));
     println!("day5p1: {}", day5p1(include_str!("../input/5")));
     println!("day5p2: {}", day5p2(include_str!("../input/5")));
+    println!("day6p1: {}", day6p1(include_str!("../input/6")));
+    println!("day6p2: {}", day6p2(include_str!("../input/6")));
+    println!("day7p1: {}", day7p1(include_str!("../input/7")));
+    println!("day7p2: {}", day7p2(include_str!("../input/7")));
 }
